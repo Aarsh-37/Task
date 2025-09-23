@@ -1,9 +1,9 @@
 import os
 import re
-import fitz  # PyMuPDF
+import fitz  
 from PyPDF2 import PdfWriter
 
-# Keywords to detect opinion/editorial pages
+
 KEYWORDS = [
     "opinion", "editorial", "op-ed", "letters to the editor",
     "columns", "commentary", "viewpoint"
