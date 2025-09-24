@@ -1,3 +1,2 @@
 PyMuPDF
 PyPDF2
-pytesseract
