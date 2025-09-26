@@ -1,13 +1,11 @@
 import os
-import fitz  # PyMuPDF
+import fitz  
 from PyPDF2 import PdfWriter
 from groq import Groq
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
-# Initialize Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
