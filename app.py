@@ -1,19 +1,51 @@
 import os
-import re
-import fitz  
+import fitz  # PyMuPDF
 from PyPDF2 import PdfWriter
+from groq import Groq
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
-KEYWORDS = [
-    "opinion", "editorial", "op-ed", "letters to the editor",
-    "columns", "commentary", "viewpoint"
-]
+# Initialize Groq client
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
 
 def is_editorial_page(text: str) -> bool:
-    text_lower = text.lower()
-    return any(re.search(rf"\b{kw}\b", text_lower) for kw in KEYWORDS)
+    """
+    Uses a Groq LLM to classify whether a page is an editorial/opinion piece.
+    """
+    if not text.strip():
+        return False
+
+    prompt = f"""
+    You are a document classifier.
+    Determine if the following page is an 'editorial' or 'opinion piece' 
+    from a newspaper. Answer strictly with YES or NO.
+
+    Page content:
+    {text}
+    """
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",  
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+
+        answer = response.choices[0].message.content.strip().upper()
+        return answer == "YES"
+    except Exception as e:
+        print(f"[ERROR] LLM classification failed: {e}")
+        return False
+
 
 def extract_editorial_pages(input_folder: str, output_file: str):
+    """
+    Extracts editorial pages from all PDFs in input_folder
+    and saves them into a consolidated PDF.
+    """
     writer = PdfWriter()
 
     for pdf_name in os.listdir(input_folder):
@@ -30,14 +62,13 @@ def extract_editorial_pages(input_folder: str, output_file: str):
 
             if is_editorial_page(text):
                 print(f"  -> Extracting page {page_num + 1}")
-                # Create a temporary PDF of this single page
                 single_page_pdf = fitz.open()
                 single_page_pdf.insert_pdf(doc, from_page=page_num, to_page=page_num)
+
                 temp_path = f"temp_{os.getpid()}_{page_num}.pdf"
                 single_page_pdf.save(temp_path)
                 single_page_pdf.close()
 
-                # Append to final writer
                 with open(temp_path, "rb") as f:
                     writer.append(f)
 
@@ -49,6 +80,7 @@ def extract_editorial_pages(input_folder: str, output_file: str):
         writer.write(f_out)
 
     print(f"[SUCCESS] Consolidated file created: {output_file}")
+
 
 if __name__ == "__main__":
     INPUT_FOLDER = "newspapers"
